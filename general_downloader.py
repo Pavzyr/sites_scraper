@@ -47,21 +47,21 @@ class Scraper:
         options.add_argument('chromedriver_binary.chromedriver_filename')
         # options.add_argument('headless')
         options.add_argument("window-size=1920,1080")
-        driver = webdriver.Chrome(options=options)
-        driver.maximize_window()
-        driver.get(self.href.value)
+        self.driver = webdriver.Chrome(options=options)
+        self.driver.maximize_window()
+        self.driver.get(self.href.value)
         print(f'Успешно перешел по ссылке {self.href.value}\n')
         try:
-            WebDriverWait(driver, 20).until(
+            WebDriverWait(self.driver, 20).until(
                 ec.presence_of_element_located(
                     ("xpath", self.xpathes_dict['trader_name']))
             )
-        except Exception as exception:
+        except:
+            logging.error(f'Проверьте, существует ли трейдер! Не смог найти имя трейдера по ссылке {self.href.value}')
             return None
-        name = remove_special_chars(driver.find_element(
+        name = remove_special_chars(self.driver.find_element(
             "xpath",
-            self.xpathes_dict['trader_name']).text
-                                    )
+            self.xpathes_dict['trader_name']).text)
         print(f'Имя трейдера = {name}\n')
         excel_name = fr'{bd_dir}\{self.site_name}\excel\{name}.xlsx'
         htm_name = fr'{bd_dir}\{self.site_name}\htm\{name}.htm'
@@ -76,13 +76,78 @@ class Scraper:
         pass
 
     def scrap_all(self):
-        self.site_open(self)
-        self.site_scrap(self)
-        self.excel_save(self)
-        self.htm_save(self)
+        open_dict = self.site_open()
+        self.site_scrap()
+        self.excel_save()
+        self.htm_save()
+
 
 class Lifefinance(Scraper):
-    pass
+    def site_scrap(self):
+        for o in (range(2, 10)):
+            time.sleep(2)
+            count = 0
+            while count == 0:
+                count = len(self.driver.find_elements("xpath",
+                                                 fr'//div[@class = "content_row"]'))
+            print(f'Начинаю обработку {count} записей на странице {o - 1}\n')
+            for l in list(range(count - 49, count + 1)):
+                currency = self.driver.find_element("xpath",
+                                               fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]').text
+                if currency is not None:
+                    date_close = self.driver.find_element("xpath",
+                                                     fr'(//div[@class = "content_row"])[{l}]'
+                                                     fr'/descendant::div[@class = "content_col"][3]').text
+                    date_close = datetime.strptime(date_close,
+                                                   '%d.%m.%Y %H:%M:%S') + timedelta(
+                        hours=-1)
+                    date_open = self.driver.find_element("xpath",
+                                                    fr'(//div[@class = "content_row"])[{l}]'
+                                                    fr'/descendant::div[@class = "content_col"][2]').text
+                    date_open = datetime.strptime(date_open,
+                                                  '%d.%m.%Y %H:%M:%S') + timedelta(
+                        hours=-1)
+                    type_of_trade = self.driver.find_element("xpath",
+                                                        fr'(//div[@class = "content_row"])[{l}]'
+                                                        fr'/descendant::div[@class = "content_col"][4]'
+                                                        ).text.lower()
+                    if type_of_trade == 'покупка':
+                        type_of_trade = 'buy'
+                    else:
+                        type_of_trade = 'sell'
+                    obj = self.driver.find_element("xpath",
+                                              fr'(//div[@class = "content_row"])[{l}]'
+                                              fr'/descendant::div[@class = "content_col"][5]'
+                                              ).text.replace(".", ",")
+                    currency = self.driver.find_element("xpath",
+                                                   fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]') \
+                        .text.replace("XAUUSD", "GOLD")
+                    price_open = self.driver.find_element("xpath",
+                                                     fr'(//div[@class = "content_row"])[{l}]'
+                                                     fr'/descendant::div[@class = "content_col"][6]'
+                                                     ).text.replace(" ", "")
+                    price_close = self.driver.find_element("xpath",
+                                                      fr'(//div[@class = "content_row"])[{l}]'
+                                                      fr'/descendant::div[@class = "content_col"][7]'
+                                                      ).text.replace(" ", "")
+                    points = self.driver.find_element("xpath",
+                                                 fr'(//div[@class = "content_row"])[{l}]'
+                                                 fr'/descendant::div[@class = "content_col"][8]'
+                                                 ).text.replace(".", ",")
+                    df_for_trader.loc[len(df_for_trader.index)] = [
+                        obj,
+                        currency,
+                        type_of_trade,
+                        date_open.strftime('%Y.%m.%d %H:%M'),
+                        price_open,
+                        date_close.strftime('%Y.%m.%d %H:%M'),
+                        price_close,
+                        points,
+                    ]
+            driver.execute_script("arguments[0].scrollIntoView();",
+                                  driver.find_element("xpath",
+                                                      fr'(//div[@class = "content_row"])[{count}]'))
+        driver.quit()
 
 
 class Forex4you(Scraper):
@@ -104,7 +169,9 @@ def remove_special_chars(string):
 logging.basicConfig(
     level=logging.ERROR,
     filename='main.log',
-    datefmt='%d.%m.%Y %H:%M:%S'
+    datefmt='%d.%m.%Y %H:%M:%S',
+    filemode='w',
+    format='%(asctime)s, %(levelname)s, %(message)s'
 )
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -115,6 +182,8 @@ input_lists = [
 ]
 lifefinance_xpathes = {
     'trader_name': fr'//div[@class = "page_header_part traders_body"]//h2',
+    'count': fr'//div[@class = "content_row"]',
+    'currency': fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]'
 }
 
 for site in input_lists:

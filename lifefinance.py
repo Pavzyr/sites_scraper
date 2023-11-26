@@ -26,11 +26,25 @@ def lifefinance_scrap(current_dir, href, stop_date, dict_for_traders):
     driver.maximize_window()
     driver.get(href.value)
     print(f'Успешно перешел по ссылке {href.value}\n')
-    WebDriverWait(driver, 600).until(
-        ec.presence_of_element_located(
-            ("xpath", fr'//div[@class = "page_header_part"]//h2'))
-    )
-    name = remove_special_chars(driver.find_element("xpath", fr'//div[@class = "page_header_part"]//h2').text)
+    try:
+        WebDriverWait(driver, 60).until(
+            ec.presence_of_element_located(
+                ("xpath", fr'//div[@class = "page_header_part traders_body"]//h2'))
+        )
+        name = remove_special_chars(
+            driver.find_element("xpath", fr'//div[@class = "page_header_part traders_body"]//h2').text)
+    except:
+        try:
+            WebDriverWait(driver, 60).until(
+                ec.presence_of_element_located(
+                    ("xpath", fr'//div[@class = "page_header_part"]//h2'))
+            )
+            name = remove_special_chars(driver.find_element("xpath", fr'//div[@class = "page_header_part"]//h2').text)
+        except:
+            print('Ошибка: не смог обнаружить имя трейдера. Возможно битая ссылка?')
+            pass
+
+
     print(f'Имя трейдера = {name}\n')
     for o in (range(2, 50)):
         time.sleep(2)
