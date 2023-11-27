@@ -1,4 +1,3 @@
-import openpyxl
 import os
 import time
 from selenium import webdriver
@@ -52,7 +51,10 @@ class Scraper:
                     ("xpath", self.xpathes_dict['trader_name']))
             )
         except:
-            logging.error(f'Проверьте, существует ли трейдер! Не смог найти имя трейдера по ссылке {self.href.value}')
+            logging.error(
+                f'Проверьте, существует ли трейдер! '
+                f'Не смог найти имя трейдера по ссылке {self.href.value}'
+            )
             return None
         name = remove_special_chars(self.driver.find_element(
             "xpath",
@@ -61,12 +63,15 @@ class Scraper:
         excel_name = fr'{bd_dir}\{self.site_name}\excel\{name}.xlsx'
         htm_name = fr'{bd_dir}\{self.site_name}\htm\{name}.htm'
         df_for_trader = pd.DataFrame(self.dict_for_traders)
+        df_for_trader_old = pd.DataFrame(self.dict_for_traders)
         last_row_for_compair = ''
         if os.path.isfile(excel_name):
             file_exist = True
-            df_for_trader = pd.read_excel(excel_name)
-            last_row_for_compair = [str(df_for_trader.iloc[df_for_trader.shape[0] - 1]['Время Закрытия']),
-                                    str(df_for_trader.iloc[df_for_trader.shape[0] - 1]['Цена Закрытия'])]
+            df_for_trader_old = pd.read_excel(excel_name, dtype=str)
+            last_row_for_compair = [
+                str(df_for_trader_old.iloc[0]['Время Закрытия']),
+                float(remove_special_chars(
+                    df_for_trader_old.iloc[0]['Цена Закрытия']))]
         else:
             file_exist = False
         return {
@@ -75,6 +80,7 @@ class Scraper:
             'htm_name': htm_name,
             'file_exist': file_exist,
             'df_for_trader': df_for_trader,
+            'df_for_trader_old': df_for_trader_old,
             'last_row_for_compair': last_row_for_compair
         }
 
@@ -82,7 +88,8 @@ class Scraper:
         pass
 
     def excel_save(self, init_dict, scrap_results):
-        scrap_results.to_excel(init_dict['excel_name'], sheet_name='Sheet1', index=False)
+        scrap_results.to_excel(init_dict['excel_name'], sheet_name='Sheet1',
+                               index=False)
         # Дальнейший код нужен для красивого форматирования колонок в excel
         wb = openpyxl.load_workbook(init_dict['excel_name'])
         ws = wb.active
@@ -98,7 +105,10 @@ class Scraper:
             adjusted_width = (max_length + 2) * 1.2
             ws.column_dimensions[column].width = adjusted_width
         wb.save(init_dict['excel_name'])
-        print(f'✅ Успешно сформировал excel с сигналами трейдера {init_dict["name"]}\n')
+        print(
+            f'✅ Успешно сформировал excel '
+            f'с сигналами трейдера {init_dict["name"]}\n'
+        )
 
     def htm_save(self, init_dict, scrap_results):
         text = ''
@@ -126,7 +136,8 @@ class Scraper:
         htm = html_string.replace("SSSSS", text)
         with io.open(init_dict['htm_name'], 'w', encoding='utf-8') as file:
             file.write(htm)
-        print(f'✅ Успешно сформировал htm с сигналами трейдера {init_dict["name"]}\n')
+        print(
+            f'✅ Успешно сформировал htm с сигналами трейдера {init_dict["name"]}\n')
 
     def scrap_all(self):
         init_dict = self.site_open()
@@ -139,148 +150,229 @@ class Scraper:
 
 class Lifefinance(Scraper):
     def site_scrap(self, init_dict):
-        for o in (range(2, 5)):
+
+        for o in (range(2, 4)):
             time.sleep(2)
             count = 0
             while count == 0:
-                count = len(self.driver.find_elements("xpath",
-                                                      fr'//div[@class = "content_row"]'))
+                count = len(self.driver.find_elements(
+                    "xpath",
+                    fr'//div[@class = "content_row"]')
+                )
             print(f'Начинаю обработку {count} записей на странице {o - 1}\n')
             for l in list(range(count - 49, count + 1)):
-                currency = self.driver.find_element("xpath",
-                                                    fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]').text
-                if currency is not None:
-                    date_close = self.driver.find_element("xpath",
-                                                          fr'(//div[@class = "content_row"])[{l}]'
-                                                          fr'/descendant::div[@class = "content_col"][3]').text
-                    date_close = datetime.strptime(date_close,
-                                                   '%d.%m.%Y %H:%M:%S') + timedelta(
-                        hours=-1)
-                    date_open = self.driver.find_element("xpath",
-                                                         fr'(//div[@class = "content_row"])[{l}]'
-                                                         fr'/descendant::div[@class = "content_col"][2]').text
-                    date_open = datetime.strptime(date_open,
-                                                  '%d.%m.%Y %H:%M:%S') + timedelta(
-                        hours=-1)
-                    type_of_trade = self.driver.find_element("xpath",
-                                                             fr'(//div[@class = "content_row"])[{l}]'
-                                                             fr'/descendant::div[@class = "content_col"][4]'
-                                                             ).text.lower()
-                    if type_of_trade == 'покупка':
-                        type_of_trade = 'buy'
-                    else:
-                        type_of_trade = 'sell'
-                    obj = self.driver.find_element("xpath",
-                                                   fr'(//div[@class = "content_row"])[{l}]'
-                                                   fr'/descendant::div[@class = "content_col"][5]'
-                                                   ).text.replace(".", ",")
-                    currency = self.driver.find_element("xpath",
-                                                        fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]') \
-                        .text.replace("XAUUSD", "GOLD")
-                    price_open = self.driver.find_element("xpath",
-                                                          fr'(//div[@class = "content_row"])[{l}]'
-                                                          fr'/descendant::div[@class = "content_col"][6]'
-                                                          ).text.replace(" ", "")
-                    price_close = self.driver.find_element("xpath",
-                                                           fr'(//div[@class = "content_row"])[{l}]'
-                                                           fr'/descendant::div[@class = "content_col"][7]'
-                                                           ).text.replace(" ", "")
-                    points = self.driver.find_element("xpath",
-                                                      fr'(//div[@class = "content_row"])[{l}]'
-                                                      fr'/descendant::div[@class = "content_col"][8]'
-                                                      ).text.replace(".", ",")
-                    new_row_to_compare = [date_close.strftime('%Y.%m.%d %H:%M'), price_close]
-                    if new_row_to_compare == init_dict['last_row_for_compair'] and init_dict['file_exist']:
-                        print('Строчку нашел, брейкаю')
-                        return init_dict['df_for_trader']
-                    else:
-                        print('Строчку не нашел, добавляю')
-                        init_dict['df_for_trader'] = pd.concat([pd.DataFrame([[
-                        obj,
-                        currency,
-                        type_of_trade,
-                        date_open.strftime('%Y.%m.%d %H:%M'),
-                        price_open,
-                        date_close.strftime('%Y.%m.%d %H:%M'),
-                        price_close,
-                        points,
-                    ]], columns=init_dict['df_for_trader'].columns), init_dict['df_for_trader']], ignore_index=True)
-
-            self.driver.execute_script("arguments[0].scrollIntoView();",
-                                       self.driver.find_element("xpath", fr'(//div[@class = "content_row"])[{count}]'))
+                currency = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]'
+                ).text
+                if currency is None:
+                    continue
+                date_close = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][3]'
+                ).text
+                date_close = datetime.strptime(
+                    date_close,
+                    '%d.%m.%Y %H:%M:%S'
+                ) + timedelta(hours=-1)
+                date_open = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][2]'
+                ).text
+                date_open = datetime.strptime(
+                    date_open,
+                    '%d.%m.%Y %H:%M:%S'
+                ) + timedelta(hours=-1)
+                type_of_trade = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][4]'
+                ).text.lower()
+                if type_of_trade == 'покупка':
+                    type_of_trade = 'buy'
+                else:
+                    type_of_trade = 'sell'
+                obj = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][5]'
+                ).text.replace(".", ",")
+                currency = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]'
+                ).text.replace("XAUUSD", "GOLD")
+                price_open = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][6]'
+                ).text.replace(" ", "")
+                price_close = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][7]'
+                ).text.replace(" ", "")
+                points = self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{l}]'
+                    fr'/descendant::div[@class = "content_col"][8]'
+                ).text.replace(".", ",")
+                new_row_to_compare = [
+                    date_close.strftime('%Y.%m.%d %H:%M'),
+                    float(remove_special_chars(price_close))]
+                if (new_row_to_compare == init_dict['last_row_for_compair']
+                        and init_dict['file_exist']):
+                    init_dict['df_for_trader'] = pd.concat(
+                        [init_dict['df_for_trader'],
+                         init_dict['df_for_trader_old']],
+                        ignore_index=True
+                    )
+                    return init_dict['df_for_trader']
+                else:
+                    new_row = pd.Series({
+                        'Объем': obj,
+                        'Валютная пара': currency,
+                        'Тип сделки': type_of_trade,
+                        'Время Открытия': date_open.strftime(
+                            '%Y.%m.%d %H:%M'),
+                        'Цена Открытия': price_open,
+                        'Время Закрытия': date_close.strftime(
+                            '%Y.%m.%d %H:%M'),
+                        'Цена Закрытия': price_close,
+                        'Прибыль': points,
+                    })
+                    init_dict['df_for_trader'].loc[
+                        len(init_dict['df_for_trader'])] = new_row
+            self.driver.execute_script(
+                "arguments[0].scrollIntoView();",
+                self.driver.find_element(
+                    "xpath",
+                    fr'(//div[@class = "content_row"])[{count}]')
+            )
         return init_dict['df_for_trader']
 
 
 class Forex4you(Scraper):
-    def site_scrap(self):
-        df_for_trader = pd.DataFrame(self.dict_for_traders)
-        self.driver.find_element("xpath",
-                            fr'//label[contains(text(), "Весь период")]'
-                            ).click()
+
+    def site_scrap(self, init_dict):
+        self.driver.find_element(
+            "xpath",
+            fr'//label[contains(text(), "Весь период")]'
+        ).click()
         for o in (range(2, 5)):
             time.sleep(2)
             count = 0
             while count == 0:
-                count = len(self.driver.find_elements("xpath",
-                                                 fr'//tbody//tr[@data-ng-repeat = '
-                                                 fr'"trade in $fxGrid.$data track by trade.id"]'
-                                                 fr'//td[@data-ng-bind="::trade.symbol"]'))
-            print(f'Начинаю обработку {count - 10} записей на странице {o - 1}\n')
+                count = len(self.driver.find_elements(
+                    "xpath",
+                    fr'//tbody//tr[@data-ng-repeat = '
+                    fr'"trade in $fxGrid.$data track by trade.id"]'
+                    fr'//td[@data-ng-bind="::trade.symbol"]')
+                )
+            print(f'Начинаю обработку {count - 10} '
+                  f'записей на странице {o - 1}\n'
+                  )
             for l in list(range(1, count - 9)):
-                currency = self.driver.find_element("xpath",
-                                               fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]').text
-                if currency is not None:
-                    date_close = self.driver.find_element("xpath",
-                                                     fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                                     '//../preceding-sibling::td[1]').text
-                    for i in self.months_in_numbers:
-                        date_close = date_close.replace(i, self.months_in_numbers[i])
-                    date_close = datetime.strptime(date_close,
-                                                   '%d %m %Y г., %H:%M:%S')
-                    date_open = self.driver.find_element("xpath",
-                                                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                                    fr'//../preceding-sibling::td[2]').text
-                    for i in self.months_in_numbers:
-                        date_open = date_open.replace(i, self.months_in_numbers[i])
-                    date_open = datetime.strptime(date_open,
-                                                  '%d %m %Y г., %H:%M:%S')
-                    type_of_trade = self.driver.find_element("xpath",
-                                                        fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                                        fr'//../following-sibling::td[1]').text.lower()
-                    obj = self.driver.find_element("xpath",
-                                              fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                              fr'//../preceding-sibling::td[3]').text.replace(
-                        ".", ",")
-                    currency = self.driver.find_element("xpath",
-                                                   fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]').text \
-                        .replace("XAUUSD", "GOLD")
-                    price_open = self.driver.find_element("xpath",
-                                                     fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                                     fr'//../following-sibling::td[2]').text.replace(
-                        " ",
-                        "")
-                    price_close = self.driver.find_element("xpath",
-                                                      fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                                      fr'//../following-sibling::td[3]').text.replace(
-                        " ",
-                        "")
-                    points = self.driver.find_element("xpath",
-                                                 fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
-                                                 fr'//../following-sibling::td[4]').text.replace(
-                        ".", ",")
-                    df_for_trader.loc[len(df_for_trader.index)] = [
-                        obj,
-                        currency,
-                        type_of_trade,
-                        date_open.strftime('%Y.%m.%d %H:%M'),
-                        price_open,
-                        date_close.strftime('%Y.%m.%d %H:%M'),
-                        price_close,
-                        points,
-                    ]
-            self.driver.find_element("xpath",
-                                fr'(//a[@data-fx-grid-set-page="$fxGridPaginator.getNextPage()"])[1]').click()
-        return df_for_trader
+                currency = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                ).text
+                if currency is None:
+                    continue
+                date_close = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    '//../preceding-sibling::td[1]'
+                ).text
+                for i in self.months_in_numbers:
+                    date_close = date_close.replace(
+                        i, self.months_in_numbers[i]
+                    )
+                date_close = datetime.strptime(
+                    date_close,
+                    '%d %m %Y г., %H:%M:%S'
+                )
+                date_open = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    fr'//../preceding-sibling::td[2]'
+                ).text
+                for i in self.months_in_numbers:
+                    date_open = date_open.replace(
+                        i,
+                        self.months_in_numbers[
+                            i]
+                    )
+                date_open = datetime.strptime(
+                    date_open,
+                    '%d %m %Y г., %H:%M:%S'
+                )
+                type_of_trade = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    fr'//../following-sibling::td[1]'
+                ).text.lower()
+                obj = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    fr'//../preceding-sibling::td[3]').text.replace(
+                    ".", ","
+                )
+                currency = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                ).text.replace("XAUUSD", "GOLD")
+                price_open = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    fr'//../following-sibling::td[2]').text.replace(
+                    " ",
+                    ""
+                )
+                price_close = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    fr'//../following-sibling::td[3]').text.replace(
+                    " ",
+                    ""
+                )
+                points = self.driver.find_element(
+                    "xpath",
+                    fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
+                    fr'//../following-sibling::td[4]'
+                ).text.replace(".", ",")
+                new_row_to_compare = [
+                    date_close.strftime('%Y.%m.%d %H:%M'),
+                    float(remove_special_chars(price_close))]
+                if (new_row_to_compare == init_dict['last_row_for_compair']
+                        and init_dict['file_exist']):
+                    init_dict['df_for_trader'] = pd.concat(
+                        [init_dict['df_for_trader'],
+                         init_dict['df_for_trader_old']],
+                        ignore_index=True
+                    )
+                    return init_dict['df_for_trader']
+                else:
+                    new_row = pd.Series({
+                        'Объем': obj,
+                        'Валютная пара': currency,
+                        'Тип сделки': type_of_trade,
+                        'Время Открытия': date_open.strftime(
+                            '%Y.%m.%d %H:%M'),
+                        'Цена Открытия': price_open,
+                        'Время Закрытия': date_close.strftime(
+                            '%Y.%m.%d %H:%M'),
+                        'Цена Закрытия': price_close,
+                        'Прибыль': points,
+                    })
+                    init_dict['df_for_trader'].loc[
+                        len(init_dict['df_for_trader'])] = new_row
+            self.driver.find_element(
+                "xpath",
+                fr'(//a[@data-fx-grid-set-page="$fxGridPaginator.getNextPage()"])[1]'
+            ).click()
+        return init_dict['df_for_trader']
 
 
 def make_hrefs_list(hrefs_file):
@@ -328,9 +420,19 @@ for site in input_lists:
         if href is None:
             continue
         elif 'forex4you' in href.value:
-            forex4you = Forex4you(driver, href, 'forex4you', forex4you_xpathes)
+            forex4you = Forex4you(
+                driver,
+                href,
+                'forex4you',
+                forex4you_xpathes
+            )
             forex4you.scrap_all()
         elif 'litefinance' in href.value:
-            litefinance = Lifefinance(driver, href, 'litefinance', lifefinance_xpathes)
+            litefinance = Lifefinance(
+                driver,
+                href,
+                'litefinance',
+                lifefinance_xpathes
+            )
             litefinance.scrap_all()
 driver.quit()

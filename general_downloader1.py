@@ -228,6 +228,21 @@ def forex4you_scrap(href, months_in_numbers, dict_for_traders):
                                              fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
                                              fr'//../following-sibling::td[4]').text.replace(
                     ".", ",")
+
+                init_dict['df_for_trader'] = pd.concat([pd.DataFrame([[
+                    obj,
+                    currency,
+                    type_of_trade,
+                    date_open.strftime('%Y.%m.%d %H:%M'),
+                    price_open,
+                    date_close.strftime('%Y.%m.%d %H:%M'),
+                    price_close,
+                    points,
+                ]], columns=init_dict['df_for_trader'].columns),
+                    init_dict['df_for_trader']], ignore_index=True)
+
+
+
                 df_for_trader.loc[len(df_for_trader.index)] = [
                     obj,
                     currency,
