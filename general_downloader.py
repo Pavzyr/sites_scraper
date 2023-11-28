@@ -45,6 +45,7 @@ class Scraper:
         print(f'Перехожу по ссылке трейдера: {self.href.value}\n')
         self.driver.get(self.href.value)
         print(f'Успешно перешел по ссылке {self.href.value}\n')
+        time.sleep(2)
         try:
             WebDriverWait(self.driver, 20).until(
                 ec.presence_of_element_located(
@@ -151,7 +152,7 @@ class Scraper:
 class Lifefinance(Scraper):
     def site_scrap(self, init_dict):
 
-        for o in (range(2, 4)):
+        for o in (range(1, 40)):
             time.sleep(2)
             count = 0
             while count == 0:
@@ -159,8 +160,11 @@ class Lifefinance(Scraper):
                     "xpath",
                     fr'//div[@class = "content_row"]')
                 )
-            print(f'Начинаю обработку {count} записей на странице {o - 1}\n')
-            for l in list(range(count - 49, count + 1)):
+            print(f'Начинаю обработку {count} записей на странице {o}\n')
+            itter = 49
+            if count < 50:
+                itter = count-1
+            for l in list(range(count - itter, count + 1)):
                 currency = self.driver.find_element(
                     "xpath",
                     fr'(//div[@class = "content_row"])[{l}]/descendant::a[2]'
@@ -244,6 +248,8 @@ class Lifefinance(Scraper):
                     })
                     init_dict['df_for_trader'].loc[
                         len(init_dict['df_for_trader'])] = new_row
+            if count % 50 != 0:
+                break
             self.driver.execute_script(
                 "arguments[0].scrollIntoView();",
                 self.driver.find_element(
@@ -260,7 +266,7 @@ class Forex4you(Scraper):
             "xpath",
             fr'//label[contains(text(), "Весь период")]'
         ).click()
-        for o in (range(2, 5)):
+        for o in (range(1, 50)):
             time.sleep(2)
             count = 0
             while count == 0:
@@ -270,10 +276,10 @@ class Forex4you(Scraper):
                     fr'"trade in $fxGrid.$data track by trade.id"]'
                     fr'//td[@data-ng-bind="::trade.symbol"]')
                 )
-            print(f'Начинаю обработку {count - 10} '
-                  f'записей на странице {o - 1}\n'
+            print(f'Начинаю обработку {count} '
+                  f'записей на странице {o}\n'
                   )
-            for l in list(range(1, count - 9)):
+            for l in list(range(1, count)):
                 currency = self.driver.find_element(
                     "xpath",
                     fr'(//td[@data-ng-bind="::trade.symbol"])[{l}]'
@@ -368,6 +374,8 @@ class Forex4you(Scraper):
                     })
                     init_dict['df_for_trader'].loc[
                         len(init_dict['df_for_trader'])] = new_row
+            if count % 10 != 0:
+                break
             self.driver.find_element(
                 "xpath",
                 fr'(//a[@data-fx-grid-set-page="$fxGridPaginator.getNextPage()"])[1]'
@@ -427,6 +435,7 @@ for site in input_lists:
                 forex4you_xpathes
             )
             forex4you.scrap_all()
+
         elif 'litefinance' in href.value:
             litefinance = Lifefinance(
                 driver,
@@ -435,4 +444,5 @@ for site in input_lists:
                 lifefinance_xpathes
             )
             litefinance.scrap_all()
+            pass
 driver.quit()
