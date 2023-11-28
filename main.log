@@ -1,3 +1,32 @@
-27.11.2023 22:44:18, ERROR, Проверьте, существует ли трейдер! Не смог найти имя трейдера по ссылке https://my.litefinance.org/ru/traders/trades-history?id=2617216
-27.11.2023 22:45:35, ERROR, Проверьте, существует ли трейдер! Не смог найти имя трейдера по ссылке https://my.litefinance.org/ru/traders/trades-history?id=2054336
-28.11.2023 00:48:42, ERROR, Проверьте, существует ли трейдер! Не смог найти имя трейдера по ссылке https://my.litefinance.org/ru/traders/trades-history?id=2352419
+28.11.2023 15:14:11, ERROR, Message: unknown error: net::ERR_SSL_PROTOCOL_ERROR
+  (Session info: chrome=119.0.6045.160)
+Stacktrace:
+	GetHandleVerifier [0x00007FF7C5AB82B2+55298]
+	(No symbol) [0x00007FF7C5A25E02]
+	(No symbol) [0x00007FF7C58E05AB]
+	(No symbol) [0x00007FF7C58DC353]
+	(No symbol) [0x00007FF7C58CF4CC]
+	(No symbol) [0x00007FF7C58D0714]
+	(No symbol) [0x00007FF7C58CF8DF]
+	(No symbol) [0x00007FF7C58CE803]
+	(No symbol) [0x00007FF7C58CE7A8]
+	(No symbol) [0x00007FF7C58CCF0E]
+	(No symbol) [0x00007FF7C58CD803]
+	(No symbol) [0x00007FF7C58E29BF]
+	(No symbol) [0x00007FF7C595AE27]
+	(No symbol) [0x00007FF7C59420AA]
+	(No symbol) [0x00007FF7C595AAA4]
+	(No symbol) [0x00007FF7C5941E83]
+	(No symbol) [0x00007FF7C591670A]
+	(No symbol) [0x00007FF7C5917964]
+	GetHandleVerifier [0x00007FF7C5E30AAB+3694587]
+	GetHandleVerifier [0x00007FF7C5E8728E+4048862]
+	GetHandleVerifier [0x00007FF7C5E7F173+4015811]
+	GetHandleVerifier [0x00007FF7C5B547D6+695590]
+	(No symbol) [0x00007FF7C5A30CE8]
+	(No symbol) [0x00007FF7C5A2CF34]
+	(No symbol) [0x00007FF7C5A2D062]
+	(No symbol) [0x00007FF7C5A1D3A3]
+	BaseThreadInitThunk [0x00007FFFCFE47034+20]
+	RtlUserThreadStart [0x00007FFFD06FCEC1+33]
+

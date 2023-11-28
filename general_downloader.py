@@ -13,7 +13,16 @@ import logging
 
 class Scraper:
 
-    def __init__(self, driver, href, site_name, xpathes_dict):
+    def __init__(self,
+                 current_dir,
+                 bd_dir,
+                 driver,
+                 href,
+                 site_name,
+                 xpathes_dict
+                 ):
+        self.current_dir = current_dir
+        self.bd_dir = bd_dir
         self.driver = driver
         self.href = href
         self.dict_for_traders = {'Объем': [],
@@ -61,8 +70,8 @@ class Scraper:
             "xpath",
             self.xpathes_dict['trader_name']).text)
         print(f'Имя трейдера = {name}\n')
-        excel_name = fr'{bd_dir}\{self.site_name}\excel\{name}.xlsx'
-        htm_name = fr'{bd_dir}\{self.site_name}\htm\{name}.htm'
+        excel_name = fr'{self.bd_dir}\{self.site_name}\excel\{name}.xlsx'
+        htm_name = fr'{self.bd_dir}\{self.site_name}\htm\{name}.htm'
         df_for_trader = pd.DataFrame(self.dict_for_traders)
         df_for_trader_old = pd.DataFrame(self.dict_for_traders)
         last_row_for_compair = ''
@@ -131,7 +140,7 @@ class Scraper:
                    fr'<td class=mspt>0</td>' \
                    fr'<td class=mspt>0</td>' \
                    '</tr>'
-        with io.open(fr'{current_dir}\resources\template1.htm', 'r',
+        with io.open(fr'{self.current_dir}\resources\template1.htm', 'r',
                      encoding='utf-8') as f:
             html_string = f.read()
         htm = html_string.replace("SSSSS", text)
@@ -395,54 +404,61 @@ def remove_special_chars(string):
     return re.sub(pattern, '', string)
 
 
-logging.basicConfig(
-    level=logging.ERROR,
-    filename='main.log',
-    datefmt='%d.%m.%Y %H:%M:%S',
-    filemode='w',
-    format='%(asctime)s, %(levelname)s, %(message)s'
-)
+def run_main():
+    try:
+        logging.basicConfig(
+            level=logging.ERROR,
+            filename='main.log',
+            datefmt='%d.%m.%Y %H:%M:%S',
+            filemode='w',
+            format='%(asctime)s, %(levelname)s, %(message)s'
+        )
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-bd_dir = current_dir + r'\resources\БАЗА ДАННЫХ'
-input_lists = [
-    make_hrefs_list(bd_dir + r'\litefinance hrefs.xlsx'),
-    make_hrefs_list(bd_dir + r'\forex4you hrefs.xlsx')
-]
-lifefinance_xpathes = {
-    'trader_name': fr'//div[@class = "page_header_part traders_body"]//h2'
-}
-forex4you_xpathes = {
-    'trader_name': fr'//span[@data-ng-bind= "::$headerCtrl.leader.displayName"]'
-}
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        bd_dir = current_dir + r'\resources\БАЗА ДАННЫХ'
+        input_lists = [
+            make_hrefs_list(bd_dir + r'\litefinance hrefs.xlsx'),
+            make_hrefs_list(bd_dir + r'\forex4you hrefs.xlsx')
+        ]
+        lifefinance_xpathes = {
+            'trader_name': fr'//div[@class = "page_header_part traders_body"]//h2'
+        }
+        forex4you_xpathes = {
+            'trader_name': fr'//span[@data-ng-bind= "::$headerCtrl.leader.displayName"]'
+        }
 
-options = webdriver.ChromeOptions()
-options.add_argument('chromedriver_binary.chromedriver_filename')
-# options.add_argument('headless')
-options.add_argument("window-size=1920,1080")
-driver = webdriver.Chrome(options=options)
-driver.maximize_window()
+        options = webdriver.ChromeOptions()
+        options.add_argument('chromedriver_binary.chromedriver_filename')
+        # options.add_argument('headless')
+        options.add_argument("window-size=1920,1080")
+        driver = webdriver.Chrome(options=options)
+        driver.maximize_window()
 
-for site in input_lists:
-    for href in site:
-        if href is None:
-            continue
-        elif 'forex4you' in href.value:
-            forex4you = Forex4you(
-                driver,
-                href,
-                'forex4you',
-                forex4you_xpathes
-            )
-            forex4you.scrap_all()
-
-        elif 'litefinance' in href.value:
-            litefinance = Lifefinance(
-                driver,
-                href,
-                'litefinance',
-                lifefinance_xpathes
-            )
-            litefinance.scrap_all()
-            pass
-driver.quit()
+        for site in input_lists:
+            for href in site:
+                if href is None:
+                    continue
+                elif 'forex4you' in href.value:
+                    forex4you = Forex4you(
+                        current_dir,
+                        bd_dir,
+                        driver,
+                        href,
+                        'forex4you',
+                        forex4you_xpathes
+                    )
+                    forex4you.scrap_all()
+                elif 'litefinance' in href.value:
+                    litefinance = Lifefinance(
+                        current_dir,
+                        bd_dir,
+                        driver,
+                        href,
+                        'litefinance',
+                        lifefinance_xpathes
+                    )
+                    litefinance.scrap_all()
+        driver.quit()
+    except Exception as exept:
+        logging.error(exept)
+        print('Произошла ошибка. Описание ошибки смотрите в логах.')
