@@ -295,6 +295,8 @@ class Forex4you(Scraper):
             print(f'Начинаю обработку {count} '
                   f'записей на странице {o}\n'
                   )
+            if count > 20:
+                count = 20
             for l in list(range(1, count)):
                 currency = self.driver.find_element(
                     "xpath",
