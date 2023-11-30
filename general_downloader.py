@@ -7,8 +7,10 @@ import pandas as pd
 from datetime import datetime, timedelta
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
+from selenium.common.exceptions import TimeoutException
 import re
 import logging
+
 
 
 class Scraper:
@@ -271,6 +273,11 @@ class Lifefinance(Scraper):
 class Forex4you(Scraper):
 
     def site_scrap(self, init_dict):
+        try:
+            element = WebDriverWait(self.driver, 1).until(ec.presence_of_element_located(("xpath", r"//div[contains(text(), 'Allow All')]")))
+            element.click()
+        except:
+            pass
         self.driver.find_element(
             "xpath",
             fr'//label[contains(text(), "Весь период")]'
@@ -462,3 +469,56 @@ def run_main():
     except Exception as exept:
         logging.error(exept)
         print('Произошла ошибка. Описание ошибки смотрите в логах.')
+
+
+if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.ERROR,
+        filename='main.log',
+        datefmt='%d.%m.%Y %H:%M:%S',
+        filemode='w',
+        format='%(asctime)s, %(levelname)s, %(message)s'
+    )
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    bd_dir = current_dir + r'\resources\БАЗА ДАННЫХ'
+    litefinance_list = make_hrefs_list(bd_dir + r'\litefinance hrefs.xlsx'),
+    forex4you_list = make_hrefs_list(bd_dir + r'\forex4you hrefs.xlsx')
+    input_lists = [make_hrefs_list(bd_dir + r'\litefinance hrefs.xlsx'),
+                   make_hrefs_list(bd_dir + r'\forex4you hrefs.xlsx')]
+    lifefinance_xpathes = {
+        'trader_name': fr'//div[@class = "page_header_part traders_body"]//h2'
+    }
+    forex4you_xpathes = {
+        'trader_name': fr'//span[@data-ng-bind= "::$headerCtrl.leader.displayName"]'
+    }
+    options = webdriver.ChromeOptions()
+    options.add_argument('chromedriver_binary.chromedriver_filename')
+    # options.add_argument('headless')
+    options.add_argument("window-size=1920,1080")
+    driver = webdriver.Chrome(options=options)
+    driver.maximize_window()
+    for site in input_lists:
+        for href in site:
+            if href is None:
+                continue
+            elif 'forex4you' in href.value:
+                forex4you = Forex4you(
+                    current_dir,
+                    bd_dir,
+                    driver,
+                    href,
+                    'forex4you',
+                    forex4you_xpathes
+                )
+                forex4you.scrap_all()
+            # elif 'litefinance' in href.value:
+            #     litefinance = Lifefinance(
+            #         current_dir,
+            #         bd_dir,
+            #         driver,
+            #         href,
+            #         'litefinance',
+            #         lifefinance_xpathes
+            #     )
+            #     litefinance.scrap_all()
+    driver.quit()
